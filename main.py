@@ -42,7 +42,7 @@ def predict():
 			new_text += word + " "
 
 	# print(p,'\n',new_text,'\n',p)
-	data = pd.read_csv("medicine data.csv")
+	data = pd.read_csv("medicine_data.csv")
 	
 	l=[]
 
