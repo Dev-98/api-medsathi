@@ -104,13 +104,13 @@ celerybeat.pid
 # Environments
 .env
 .venv
-.api
+.medsathi_env
 env/
 venv/
-api/
+medsathi_env/
 env.bak/
 venv.bak/
-api/
+medsathi_env/
 # Spyder project settings
 .spyderproject
 .spyproject
