@@ -1,5 +1,6 @@
 # ALL THE LIBRARY THIS PROJECT USES
 from flask import Flask , request, jsonify
+from flask_cors import CORS
 import easyocr, os
 from PIL import Image
 import pandas as pd
@@ -8,60 +9,60 @@ from string import digits, punctuation
 
 # DEFINING OBJECT
 app = Flask(__name__)
+CORS(app)
 
 # DEFINIG FIRST PAGE 
 @app.route('/')
 def main():
 	return ' HELLO WORLD '
 
-@app.route('/predict', methods=['POST'])
+@app.route('/predict', methods=['GET','POST'])
 def predict():
 
-	image = request.files['image']
-
-	path = Image.open(image.stream)
-	reader = easyocr.Reader(['en'])
-
-	results = reader.readtext(path)
+	if request.method == 'POST':
+		image = request.files['image']
 	
-	text = ' ' 
-	for result in results:
-		text += result[1] + ' '
+		path = Image.open(image.stream)
+		reader = easyocr.Reader(['en'])
 
-	# print(p,'\n',text,'\n',p)
+		results = reader.readtext(path)
+		
+		text = ' ' 
+		for result in results:
+			text += result[1] + ' '
 
-	remove_digits = str.maketrans('', '', punctuation)
-	remove_digits2 = str.maketrans('', '', digits)
+		# print(p,'\n',text,'\n',p)
 
-	res = text.translate(remove_digits)
-	res = res.translate(remove_digits2)
+		remove_digits = str.maketrans('', '', punctuation)
+		remove_digits2 = str.maketrans('', '', digits)
 
-	new_text = ""
-	for word in str(res).split():
-		if (len(word) > 4):
-			new_text += word + " "
+		res = text.translate(remove_digits)
+		res = res.translate(remove_digits2)
 
-	# print(p,'\n',new_text,'\n',p)
-	data = pd.read_csv("medicine_data.csv")
-	
-	l=[]
+		new_text = ""
+		for word in str(res).split():
+			if (len(word) > 4):
+				new_text += word + " "
 
-	for i in data["Medicine"]:
-		score = fuzz.partial_token_sort_ratio(i, new_text)
-		l.append(score)
-		index = sorted(list(enumerate(l)), reverse=True, key=lambda x: x[1])[0][0]
-		if max(l) >= 80:
-			bimari = data["Disease"][index]
-			dawai = data["Medicine"][index]
-			out = {'Ailments': bimari, 'Medicine': dawai}
-		else :
-			bimari = 'Not available in database'
-			dawai = 'Unreadable image'
-			out = {'Ailments': bimari, 'Medicine': dawai}
+		# print(p,'\n',new_text,'\n',p)
+		data = pd.read_csv("medicine_data.csv")
+		
+		l=[]
 
+		for i in data["Medicine"]:
+			score = fuzz.partial_token_sort_ratio(i, new_text)
+			l.append(score)
+			index = sorted(list(enumerate(l)), reverse=True, key=lambda x: x[1])[0][0]
+			if max(l) >= 80:
+				bimari = data["Disease"][index]
+				dawai = data["Medicine"][index]
+				out = {'Ailments': bimari, 'Medicine': dawai}
+			else :
+				bimari = 'Not available in database'
+				dawai = 'Unreadable image'
+				out = {'Ailments': bimari, 'Medicine': dawai}
 			
-	return jsonify(out)
-
+		return jsonify(out), 200
 
 if __name__ == '__main__':
 	app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080))) 
