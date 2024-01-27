@@ -6,6 +6,8 @@ from PIL import Image
 import pandas as pd
 from thefuzz import fuzz
 from string import digits, punctuation
+import base64
+from io import BytesIO
 
 # DEFINING OBJECT
 app = Flask(__name__)
@@ -17,14 +19,30 @@ def main():
 	return ' HELLO WORLD '
 
 
+def bs_to_jpg(url):
+	url = url[url.index(",")+1:]
+
+	image_bytes = base64.b64decode(url)
+	img = Image.open(BytesIO(image_bytes))
+
+	out = img.convert('RGB')
+	out.save('temp.jpg')
+
+	# return "success"
+	
+
+
 @app.route('/predict', methods=['GET','POST'])
 def predict():
 
 	if request.method == 'POST':
-		image = request.files['image']
+		data = request.json
+		base64_img = data['image']
 
 		try:
-			path = Image.open(image.stream)
+			bs_to_jpg(base64_img)
+
+			path = Image.open("temp.jpg")
 			reader = easyocr.Reader(['en'])
 
 			results = reader.readtext(path)
@@ -33,7 +51,8 @@ def predict():
 			for result in results:
 				text += result[1] + ' '
 
-			# print(p,'\n',text,'\n',p)
+			# print(text,'\n')
+			os.remove("temp.jpg")
 
 			remove_digits = str.maketrans('', '', punctuation)
 			remove_digits2 = str.maketrans('', '', digits)
@@ -51,7 +70,7 @@ def predict():
 			
 			l=[]
 
-			print("Name = ",new_text.lower())
+			# print("Name = ",new_text.lower())
 
 			for i in data["Medicine_Name"]:
 				score = fuzz.partial_token_sort_ratio(i.lower(), new_text.lower())
@@ -62,7 +81,7 @@ def predict():
 					uses = data["Uses"][index]
 					dawai = data["Medicine_Name"][index]
 					effects = data["Side_effects"][index]
-					url = data["Image URL"][index]
+					url = data["Image_URL"][index]
 
 					out = {'Use cases': uses, 'Medicine': dawai, 'effects': effects, 'image_url': url}
 
@@ -77,6 +96,8 @@ def predict():
 		except Exception as e :
 
 			return jsonify({'error': e}), 500
+
+
 
 if __name__ == '__main__':
 	app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080))) 
